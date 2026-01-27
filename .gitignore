@@ -1,0 +1,17 @@
+# Environment variables
+.env
+
+# SSL certificates
+server.crt
+server.key
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+dist/
+build/
+*.egg-info/

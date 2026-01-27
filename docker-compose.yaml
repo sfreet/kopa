@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  webhook:
+    build: .
+    image: opa-webhook:latest
+    ports:
+      - "8443:8443"
+    volumes:
+      # Mount the certificate files from the host into the container.
+      - ./server.crt:/app/server.crt:ro
+      - ./server.key:/app/server.key:ro
+    env_file:
+      - .env
+    restart: unless-stopped

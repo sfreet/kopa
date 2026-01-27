@@ -1,0 +1,21 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: opa-validating-webhook
+webhooks:
+  - name: validation.opa.example.com
+    clientConfig:
+      # [REQUIRED] Enter the external access URL of the webhook server here.
+      url: "https://<your_external_domain_or_ip>:8443/validate"
+      
+      # [REQUIRED] Enter the Base64 encoded value of the certificate (PEM) generated for the external server here.
+      # e.g., cat external-server.crt | base64 -w 0
+      caBundle: "<YOUR_BASE64_ENCODED_CERT>"
+      
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["", "apps"]
+        apiVersions: ["v1"]
+        resources: ["pods", "namespaces", "deployments"]
+    sideEffects: None
+    admissionReviewVersions: ["v1"]
