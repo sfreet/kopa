@@ -42,6 +42,17 @@ def validate():
 
     try:
         admission_review = request.get_json()
+        req = admission_review.get("request", {})
+
+        # Immediately allow requests from system components to bypass OPA
+        username = req.get("userInfo", {}).get("username")
+        if username and username.startswith("system:"):
+            admission_response = {"uid": req.get("uid"), "allowed": True, "status": {"message": "Allowed: System request"}}
+            return jsonify({
+                "apiVersion": "admission.k8s.io/v1",
+                "kind": "AdmissionReview",
+                "response": admission_response
+            })
 
         # Conditionally log the full AdmissionReview for debugging
         if os.getenv("LOG_FULL_ADMISSION_REVIEW", "false").lower() == "true":
@@ -49,11 +60,8 @@ def validate():
 
         # Extract and log a concise audit log for user actions
         try:
-            req = admission_review.get("request", {})
             user_info = req.get("userInfo", {})
-            username = user_info.get("username")
-
-            # Only log actions not initiated by system components
+            # This check is now somewhat redundant due to the bypass logic above, but remains as a safeguard.
             if username and not username.startswith("system:"):
                 audit_log = {
                     "user": username,
@@ -74,7 +82,7 @@ def validate():
             logging.error("Invalid AdmissionReview received")
             return jsonify({"error": "Invalid AdmissionReview format"}), 400
 
-        logging.info(f"Received AdmissionReview UID: {admission_review['request'].get('uid')}")
+        logging.info(f"Received AdmissionReview UID: {req.get('uid')}")
 
         opa_input = {"input": admission_review}
         headers = {
@@ -109,7 +117,7 @@ def validate():
         message = "Request allowed by OPA policy" if is_allowed else "Request denied by OPA policy"
 
         admission_response = {
-            "uid": admission_review["request"]["uid"],
+            "uid": req.get("uid"),
             "allowed": is_allowed,
             "status": {"message": message}
         }
