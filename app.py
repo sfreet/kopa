@@ -49,6 +49,7 @@ def validate():
             req = admission_review.get("request", {})
             audit_log = {
                 "user": req.get("userInfo", {}).get("username"),
+                "groups": req.get("userInfo", {}).get("groups"),
                 "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
                 "operation": req.get("operation"),
                 "object": {
