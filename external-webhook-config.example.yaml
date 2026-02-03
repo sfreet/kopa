@@ -1,0 +1,65 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  # This name should be unique in your cluster.
+  name: kopa-validating-webhook
+webhooks:
+  - name: kopa.default.svc # A descriptive name, often reflecting the service DNS name
+    
+    # This policy determines what happens if the webhook service is unavailable or times out.
+    # "Ignore": Allows the request to proceed without validation. (Safer for cluster availability)
+    # "Fail": Blocks the request. (Stricter security, but can impact cluster operations if the webhook is down)
+    failurePolicy: Ignore
+    
+    # How long the API server will wait for the webhook to respond.
+    timeoutSeconds: 5
+    
+    matchPolicy: Equivalent
+    sideEffects: None
+    admissionReviewVersions: ["v1"]
+
+    # The clientConfig tells the API server how to connect to your webhook service.
+    clientConfig:
+      # ========================================================================
+      # IMPORTANT: Replace this URL with the actual URL of your deployed webhook service.
+      #
+      # If running inside the cluster, this is typically a Service URL like:
+      # https://<service-name>.<namespace>.svc/validate
+      #
+      # If external, provide the full external URL.
+      url: "<YOUR_WEBHOOK_SERVICE_URL>/validate"
+
+      # IMPORTANT: This must be the base64-encoded CA certificate that signed the
+      # webhook server's TLS certificate.
+      #
+      # You can generate this value with the following command:
+      # cat path/to/your/ca.crt | base64 | tr -d '\n'
+      caBundle: "<YOUR_BASE64_ENCODED_CA_BUNDLE>"
+      # ========================================================================
+
+    # This selector limits the webhook to only run on namespaces with the specified label.
+    # This is a critical safety feature to prevent the webhook from affecting the entire cluster.
+    # You can change the label or remove this section to apply the webhook to all namespaces (not recommended).
+    namespaceSelector:
+      matchLabels:
+        kopa-validation: "enabled" # Example label
+
+    # These rules define which API operations (on which resources) will be sent to the webhook.
+    rules:
+      # Rule for standard operations on Pods
+      - operations: ["CREATE", "UPDATE", "DELETE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+
+      # A separate, specific rule for intercepting 'exec', 'attach', and 'portforward' on Pods
+      - operations: ["CONNECT"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods/exec", "pods/attach", "pods/portforward"]
+
+      # Rule for standard operations on Deployments
+      - operations: ["CREATE", "UPDATE", "DELETE"]
+        apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        resources: ["deployments"]

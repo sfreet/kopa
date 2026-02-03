@@ -10,6 +10,7 @@ services:
       # Mount the certificate files from the host into the container.
       - ./server.crt:/app/server.crt:ro
       - ./server.key:/app/server.key:ro
+      - ./opa-ca.crt:/app/opa-ca.crt:ro
     env_file:
       - .env
     restart: unless-stopped
