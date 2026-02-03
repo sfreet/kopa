@@ -41,6 +41,7 @@ def validate():
 
     try:
         admission_review = request.get_json()
+        logging.info(f"Full AdmissionReview received: {json.dumps(admission_review, indent=2)}")
         if not admission_review or 'request' not in admission_review:
             logging.error("Invalid AdmissionReview received")
             return jsonify({"error": "Invalid AdmissionReview format"}), 400
