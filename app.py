@@ -1,6 +1,7 @@
 import json
 import os
 import requests
+import datetime
 from flask import Flask, request, jsonify
 import logging
 
@@ -42,6 +43,24 @@ def validate():
     try:
         admission_review = request.get_json()
         logging.info(f"Full AdmissionReview received: {json.dumps(admission_review, indent=2)}")
+
+        # Extract and log a concise audit log
+        try:
+            req = admission_review.get("request", {})
+            audit_log = {
+                "user": req.get("userInfo", {}).get("username"),
+                "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                "operation": req.get("operation"),
+                "object": {
+                    "kind": req.get("kind", {}).get("kind"),
+                    "name": req.get("name"),
+                    "namespace": req.get("namespace"),
+                }
+            }
+            logging.info(f"Audit Log: {json.dumps({'audit_log': audit_log}, indent=2)}")
+        except Exception as e:
+            logging.error(f"Failed to create audit log: {e}")
+
         if not admission_review or 'request' not in admission_review:
             logging.error("Invalid AdmissionReview received")
             return jsonify({"error": "Invalid AdmissionReview format"}), 400
