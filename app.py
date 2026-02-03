@@ -57,8 +57,13 @@ def validate():
         
         # Configure TLS verification for the OPA server.
         # If OPA_CACERT is set, use the specified CA certificate.
+        # If OPA_VERIFY_SSL is 'false', disable verification.
         # Otherwise, use the system's default trust store.
-        verify_option = OPA_CACERT if OPA_CACERT else True
+        verify_option = True
+        if OPA_CACERT:
+            verify_option = OPA_CACERT
+        elif os.getenv("OPA_VERIFY_SSL", "true").lower() == "false":
+            verify_option = False
         
         response = requests.post(
             OPA_ENDPOINT, 
@@ -71,7 +76,7 @@ def validate():
         opa_response = response.json()
         logging.info(f"Received OPA response: {json.dumps(opa_response, indent=2)}")
 
-        is_allowed = opa_response.get("result", {}).get("allow", False)
+        is_allowed = opa_response.get("result", {}).get("decision", False)
         message = "Request allowed by OPA policy" if is_allowed else "Request denied by OPA policy"
 
         admission_response = {
