@@ -42,23 +42,31 @@ def validate():
 
     try:
         admission_review = request.get_json()
-        logging.info(f"Full AdmissionReview received: {json.dumps(admission_review, indent=2)}")
 
-        # Extract and log a concise audit log
+        # Conditionally log the full AdmissionReview for debugging
+        if os.getenv("LOG_FULL_ADMISSION_REVIEW", "false").lower() == "true":
+            logging.info(f"Full AdmissionReview received: {json.dumps(admission_review, indent=2)}")
+
+        # Extract and log a concise audit log for user actions
         try:
             req = admission_review.get("request", {})
-            audit_log = {
-                "user": req.get("userInfo", {}).get("username"),
-                "groups": req.get("userInfo", {}).get("groups"),
-                "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-                "operation": req.get("operation"),
-                "object": {
-                    "kind": req.get("kind", {}).get("kind"),
-                    "name": req.get("name"),
-                    "namespace": req.get("namespace"),
+            user_info = req.get("userInfo", {})
+            username = user_info.get("username")
+
+            # Only log actions not initiated by system components
+            if username and not username.startswith("system:"):
+                audit_log = {
+                    "user": username,
+                    "groups": user_info.get("groups"),
+                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                    "operation": req.get("operation"),
+                    "object": {
+                        "kind": req.get("kind", {}).get("kind"),
+                        "name": req.get("name"),
+                        "namespace": req.get("namespace"),
+                    }
                 }
-            }
-            logging.info(f"Audit Log: {json.dumps({'audit_log': audit_log}, indent=2)}")
+                logging.info(f"User Action Audit Log: {json.dumps({'audit_log': audit_log}, indent=2)}")
         except Exception as e:
             logging.error(f"Failed to create audit log: {e}")
 
