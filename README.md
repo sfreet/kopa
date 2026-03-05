@@ -110,3 +110,28 @@ Apply after start:
 ```bash
 kubectl apply -f external-webhook-config.yaml
 ```
+
+## OPA Policy Example
+
+Reference files:
+
+- `policy/example.rego`
+- `policy/input-sample.json`
+
+This webhook expects OPA response shape:
+
+```json
+{"result":{"decision":true}}
+```
+
+Example policy endpoint:
+
+```text
+/v1/data/kopa/admission
+```
+
+Quick local check with OPA CLI:
+
+```bash
+opa eval -d policy/example.rego -i policy/input-sample.json "data.kopa.admission.decision"
+```
