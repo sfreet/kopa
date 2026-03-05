@@ -121,7 +121,7 @@ Reference files:
 This webhook expects OPA response shape:
 
 ```json
-{"result":{"decision":true}}
+{"result":{"decision":<true|false>}}
 ```
 
 Example policy endpoint:
