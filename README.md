@@ -121,8 +121,10 @@ Reference files:
 This webhook expects OPA response shape:
 
 ```json
-{"result":{"decision":<true|false>}}
+{"result":{"decision":<true|false>,"context":"<optional message>"}}
 ```
+
+If `result.context` is present and non-empty, Kopa forwards it to Kubernetes as the admission status message. Otherwise it falls back to the default allow/deny message.
 
 Example policy endpoint:
 

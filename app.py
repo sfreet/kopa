@@ -113,8 +113,13 @@ def validate():
         opa_response = response.json()
         logging.info(f"Received OPA response: {json.dumps(opa_response, indent=2)}")
 
-        is_allowed = opa_response.get("result", {}).get("decision", False)
-        message = "Request allowed by OPA policy" if is_allowed else "Request denied by OPA policy"
+        result = opa_response.get("result", {})
+        is_allowed = result.get("decision", False)
+        context_message = result.get("context")
+        if isinstance(context_message, str) and context_message.strip():
+            message = context_message.strip()
+        else:
+            message = "Request allowed by OPA policy" if is_allowed else "Request denied by OPA policy"
 
         admission_response = {
             "uid": req.get("uid"),
