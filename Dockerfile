@@ -7,11 +7,11 @@ WORKDIR /app
 # Copy the dependencies file to the working directory
 COPY requirements.txt .
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies, then remove the manifest from the runtime filesystem
+RUN pip install --no-cache-dir -r requirements.txt && rm requirements.txt
 
-# Copy the rest of the application's code to the working directory
-COPY . .
+# Copy only the webhook application code needed at runtime
+COPY app.py .
 
 # Expose the port the app runs on
 EXPOSE 8443

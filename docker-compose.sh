@@ -242,7 +242,8 @@ EOF
   openssl req -newkey rsa:4096 -nodes \
     -keyout "$SERVER_KEY" \
     -out "$SCRIPT_DIR/server.csr" \
-    -subj "/CN=${server_ip}"
+    -subj "/CN=${server_ip}" \
+    -config /dev/null
 
   openssl x509 -req -sha256 -days 825 \
     -in "$SCRIPT_DIR/server.csr" \
