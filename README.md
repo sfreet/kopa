@@ -1,5 +1,12 @@
 # Kubernetes Validating Admission Webhook for OPA
 
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-Admission%20Webhook-326CE5?logo=kubernetes&logoColor=white)
+![OPA](https://img.shields.io/badge/OPA-Integrated-7D9199)
+![Deployment](https://img.shields.io/badge/Deployment-On--Prem%20%2F%20Offline-2F855A)
+
 ## Overview
 
 This project runs a Python-based Kubernetes Validating Admission Webhook.
