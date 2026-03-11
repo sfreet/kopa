@@ -32,6 +32,7 @@ package: build
 	tar -czf $(BUNDLE_FILE) -C $(PACKAGE_DIR) kopa
 	cp install-kopa.sh $(PACKAGE_DIR)/
 	chmod +x $(PACKAGE_DIR)/install-kopa.sh
+	rm -rf $(PACKAGE_WORKDIR)
 	tar -czf $(DIST_BUNDLE_FILE) $(PACKAGE_DIR)
 	@echo "Bundle created: $(BUNDLE_FILE)"
 	@echo "Installer created: $(PACKAGE_DIR)/install-kopa.sh"
