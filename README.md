@@ -62,7 +62,7 @@ cd /usr/geni/kopa
 First start (when `server.crt` / `server.key` do not exist):
 
 ```bash
-./docker-compose.sh start --ip <SERVER_IP> [--ca-path <PATH>]
+./docker-compose.sh start [--ip <SERVER_IP> | --domain <SERVER_DOMAIN>] [--ca-path <PATH>]
 ```
 
 Examples:
@@ -70,13 +70,14 @@ Examples:
 ```bash
 ./docker-compose.sh start --ip 172.16.102.96 --ca-path /usr/geni/opa/cert
 ./docker-compose.sh start --ip 172.16.102.96 --ca-path /usr/geni/opa
+./docker-compose.sh start --domain webhook.example.com --ca-path /usr/geni/opa/cert
 ```
 
 Behavior:
 
 - If `--ca-path` contains `myCA.crt` and `myCA.key` (in `<PATH>` or `<PATH>/cert`), that CA is used.
 - If CA is not found, self CA (`opa-ca.crt` / `opa-ca.key`) is created and used.
-- `server.crt` is generated with SAN IP from `--ip`.
+- `server.crt` is generated with SAN IP from `--ip` or SAN DNS from `--domain`.
 - On later runs, if server cert/key already exist, generation is skipped, so this works:
 
 ```bash
@@ -87,7 +88,7 @@ Other commands:
 
 ```bash
 ./docker-compose.sh stop
-./docker-compose.sh restart --ip <SERVER_IP> [--ca-path <PATH>]
+./docker-compose.sh restart [--ip <SERVER_IP> | --domain <SERVER_DOMAIN>] [--ca-path <PATH>]
 ```
 
 ## Environment Variables

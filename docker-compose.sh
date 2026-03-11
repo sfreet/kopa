@@ -29,8 +29,8 @@ fi
 usage() {
   cat <<USAGE
 Usage:
-  $(basename "$0") start [--ip <SERVER_IP>] [--ca-path <CA_BASE_PATH>]
-  $(basename "$0") restart [--ip <SERVER_IP>] [--ca-path <CA_BASE_PATH>]
+  $(basename "$0") start [--ip <SERVER_IP> | --domain <SERVER_DOMAIN>] [--ca-path <CA_BASE_PATH>]
+  $(basename "$0") restart [--ip <SERVER_IP> | --domain <SERVER_DOMAIN>] [--ca-path <CA_BASE_PATH>]
   $(basename "$0") {stop|load-image}
 
 Commands:
@@ -40,13 +40,15 @@ Commands:
   load-image Load image tar only
 
 Options:
-  --ip <SERVER_IP>      Required only when generating new server certificate
+  --ip <SERVER_IP>      Use IP for first-time server certificate generation
+  --domain <DOMAIN>     Use domain for first-time server certificate generation
   --ca-path <PATH>      Use existing CA from PATH (or PATH/cert): myCA.crt, myCA.key
 USAGE
 }
 
 parse_start_args() {
   local ip_value=""
+  local domain_value=""
   local ca_path_value=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -57,6 +59,14 @@ parse_start_args() {
           exit 1
         fi
         ip_value="$1"
+        ;;
+      --domain)
+        shift
+        if [[ $# -eq 0 ]]; then
+          echo "Error: --domain requires a value" >&2
+          exit 1
+        fi
+        domain_value="$1"
         ;;
       --ca-path)
         shift
@@ -75,7 +85,13 @@ parse_start_args() {
     shift
   done
 
+  if [[ -n "$ip_value" && -n "$domain_value" ]]; then
+    echo "Error: use either --ip or --domain, not both" >&2
+    exit 1
+  fi
+
   SERVER_IP="$ip_value"
+  SERVER_DOMAIN="$domain_value"
   CA_PATH="$ca_path_value"
 }
 
@@ -175,10 +191,14 @@ ensure_opa_ca_mount_path() {
 
 ensure_server_certificates() {
   local server_ip="$1"
-  local ca_path="$2"
+  local server_domain="$2"
+  local ca_path="$3"
   local signing_ca_cert="$OPA_CA_CERT_PATH"
   local signing_ca_key="$OPA_CA_KEY_PATH"
   local serial_file="$SCRIPT_DIR/server-ca.srl"
+  local san_entry=""
+  local cert_cn=""
+  local identity_label=""
 
   if [[ -f "$SERVER_CERT" && -f "$SERVER_KEY" ]]; then
     echo "Server certificate already exists. Skipping generation."
@@ -192,11 +212,21 @@ ensure_server_certificates() {
     return 0
   fi
 
-  if [[ -z "$server_ip" ]]; then
+  if [[ -n "$server_ip" ]]; then
+    san_entry="IP:${server_ip}"
+    cert_cn="$server_ip"
+    identity_label="IP ${server_ip}"
+  elif [[ -n "$server_domain" ]]; then
+    san_entry="DNS:${server_domain}"
+    cert_cn="$server_domain"
+    identity_label="domain ${server_domain}"
+  else
     echo "Error: server certificate is missing." >&2
-    echo "Run with --ip <SERVER_IP> for first-time certificate generation." >&2
+    echo "Run with --ip <SERVER_IP> or --domain <SERVER_DOMAIN> for first-time certificate generation." >&2
     echo "If you want to sign with an existing CA, also pass --ca-path <PATH>." >&2
-    echo "Example: ./docker-compose.sh start --ip 172.16.102.96 --ca-path /usr/geni/opa/cert" >&2
+    echo "Examples:" >&2
+    echo "  ./docker-compose.sh start --ip 172.16.102.96 --ca-path /usr/geni/opa/cert" >&2
+    echo "  ./docker-compose.sh start --domain webhook.example.com --ca-path /usr/geni/opa/cert" >&2
     echo "If --ca-path is omitted (or CA files are not found), a self CA will be generated." >&2
     exit 1
   fi
@@ -233,16 +263,16 @@ ensure_server_certificates() {
   local extfile
   extfile="$(mktemp)"
   cat >"$extfile" <<EOF
-subjectAltName=IP:${server_ip}
+subjectAltName=${san_entry}
 extendedKeyUsage=serverAuth
 keyUsage=digitalSignature,keyEncipherment
 EOF
 
-  echo "Generating server certificate for IP ${server_ip} ..."
+  echo "Generating server certificate for ${identity_label} ..."
   openssl req -newkey rsa:4096 -nodes \
     -keyout "$SERVER_KEY" \
     -out "$SCRIPT_DIR/server.csr" \
-    -subj "/CN=${server_ip}" \
+    -subj "/CN=${cert_cn}" \
     -config /dev/null
 
   openssl x509 -req -sha256 -days 825 \
@@ -289,7 +319,7 @@ case "$COMMAND" in
       echo "Image tar not found, skipping load: $IMAGE_TAR"
     fi
     ensure_opa_ca_mount_path
-    ensure_server_certificates "$SERVER_IP" "$CA_PATH"
+    ensure_server_certificates "$SERVER_IP" "$SERVER_DOMAIN" "$CA_PATH"
     sync_opa_ca_cert "${ACTIVE_CA_CERT:-}"
     update_webhook_cabundle "${ACTIVE_CA_CERT:-}"
     "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" up -d --no-build
@@ -311,7 +341,7 @@ case "$COMMAND" in
       echo "Image tar not found, skipping load: $IMAGE_TAR"
     fi
     ensure_opa_ca_mount_path
-    ensure_server_certificates "$SERVER_IP" "$CA_PATH"
+    ensure_server_certificates "$SERVER_IP" "$SERVER_DOMAIN" "$CA_PATH"
     sync_opa_ca_cert "${ACTIVE_CA_CERT:-}"
     update_webhook_cabundle "${ACTIVE_CA_CERT:-}"
     "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" up -d --no-build
