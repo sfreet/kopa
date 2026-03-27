@@ -18,7 +18,7 @@ Primary deployment target is on-prem/offline installation using a packaged Docke
 
 - Docker
 - Docker Compose (`docker compose` or `docker-compose`)
-- `openssl` (for certificate generation on first start)
+- `openssl` (for certificate generation during install)
 
 ## Build Package (Producer Side)
 
@@ -32,7 +32,7 @@ Output artifacts:
 
 - `kopa-dist.tar.gz` (final file to transfer)
 - `dist/kopa.tar.gz`
-- `dist/install-kopa.sh`
+- `dist/kopa-dist/install-kopa.sh`
 
 ## Install Package (Target Server)
 
@@ -40,11 +40,11 @@ Transfer `kopa-dist.tar.gz` to the target server and run:
 
 ```bash
 tar -xzf kopa-dist.tar.gz
-cd dist
-./install-kopa.sh
+cd kopa-dist
+./install-kopa.sh [kopa.tar.gz] [--ip <SERVER_IP>] [--domain <SERVER_DOMAIN>] [--ca-path <PATH>]
 ```
 
-Default install location is `/usr/geni/kopa`.
+Default install location is `$HOME/opt/kopa`.
 You can override with environment variables:
 
 ```bash
@@ -56,39 +56,43 @@ BASE_DIR=/custom/path APP_DIR_NAME=kopa ./install-kopa.sh
 Go to install directory:
 
 ```bash
-cd /usr/geni/kopa
+cd ~/opt/kopa
 ```
 
-First start (when `server.crt` / `server.key` do not exist):
+Install-time certificate generation:
 
 ```bash
-./docker-compose.sh start [--ip <SERVER_IP> | --domain <SERVER_DOMAIN>] [--ca-path <PATH>]
+./install-kopa.sh kopa.tar.gz [--ip <SERVER_IP>] [--domain <SERVER_DOMAIN>] [--ca-path <PATH>]
 ```
 
 Examples:
 
 ```bash
-./docker-compose.sh start --ip 172.16.102.96 --ca-path /usr/geni/opa/cert
-./docker-compose.sh start --ip 172.16.102.96 --ca-path /usr/geni/opa
-./docker-compose.sh start --domain webhook.example.com --ca-path /usr/geni/opa/cert
+./install-kopa.sh kopa.tar.gz --ip 172.16.102.96 --ca-path ~/opt/opa/cert
+./install-kopa.sh kopa.tar.gz --ip 172.16.102.96 --domain webhook.example.com --ca-path ~/opt/opa/cert
+./install-kopa.sh kopa.tar.gz --domain webhook.example.com --ca-path ~/opt/opa/cert
 ```
 
 Behavior:
 
 - If `--ca-path` contains `myCA.crt` and `myCA.key` (in `<PATH>` or `<PATH>/cert`), that CA is used.
 - If CA is not found, self CA (`opa-ca.crt` / `opa-ca.key`) is created and used.
-- `server.crt` is generated with SAN IP from `--ip` or SAN DNS from `--domain`.
-- On later runs, if server cert/key already exist, generation is skipped, so this works:
+- `server.crt` is generated during install with SAN IP from `--ip`, SAN DNS from `--domain`, or both.
+- `external-webhook-config.yaml` is updated during install so `clientConfig.caBundle` matches the active CA.
+- On later installs, if server cert/key already exist, generation is skipped.
+
+Start the service after installation:
 
 ```bash
-./docker-compose.sh start
+./load_images.sh
+./compose.sh start
 ```
 
 Other commands:
 
 ```bash
-./docker-compose.sh stop
-./docker-compose.sh restart [--ip <SERVER_IP> | --domain <SERVER_DOMAIN>] [--ca-path <PATH>]
+./compose.sh stop
+./compose.sh restart
 ```
 
 ## Environment Variables
@@ -104,9 +108,11 @@ You still need to set actual OPA values in `.env`:
 - `OPA_ENDPOINT`
 - `OPA_BEARER_TOKEN`
 
+If you need different published ports, update `docker-compose.yaml` before starting the service. In rootless Docker environments, avoid host ports below `1024`.
+
 ## Kubernetes Webhook Configuration
 
-During `start` / `restart`, script updates `external-webhook-config.yaml` automatically:
+During installation, `install-kopa.sh` updates `external-webhook-config.yaml` automatically:
 
 - `clientConfig.caBundle` is auto-filled from the active CA cert.
 - If `external-webhook-config.yaml` does not exist, it is created from `external-webhook-config.example.yaml`.

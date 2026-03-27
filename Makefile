@@ -2,6 +2,7 @@
 
 IMAGE ?= opa-webhook:latest
 PACKAGE_DIR ?= dist
+DIST_BUNDLE_NAME ?= kopa-dist
 PACKAGE_WORKDIR ?= $(PACKAGE_DIR)/kopa
 PACKAGE_FILE ?= $(PACKAGE_WORKDIR)/opa-webhook-image.tar
 BUNDLE_FILE ?= $(PACKAGE_DIR)/kopa.tar.gz
@@ -24,18 +25,26 @@ package: build
 	@echo "Saving Docker image ($(IMAGE))..."
 	docker image save -o $(PACKAGE_FILE) $(IMAGE)
 	cp docker-compose.yaml $(PACKAGE_WORKDIR)/
-	cp docker-compose.sh $(PACKAGE_WORKDIR)/
+	cp compose.sh $(PACKAGE_WORKDIR)/
 	cp .env.example $(PACKAGE_WORKDIR)/
 	@if [ -f external-webhook-config.example.yaml ]; then cp external-webhook-config.example.yaml $(PACKAGE_WORKDIR)/; fi
 	@if [ -f external-webhook-config.yaml ]; then cp external-webhook-config.yaml $(PACKAGE_WORKDIR)/; fi
+	@echo '#!/usr/bin/env bash' > $(PACKAGE_WORKDIR)/load_images.sh
+	@echo 'set -euo pipefail' >> $(PACKAGE_WORKDIR)/load_images.sh
+	@echo 'echo "Loading Docker image from opa-webhook-image.tar ..."' >> $(PACKAGE_WORKDIR)/load_images.sh
+	@echo 'docker image load -i opa-webhook-image.tar' >> $(PACKAGE_WORKDIR)/load_images.sh
+	@chmod +x $(PACKAGE_WORKDIR)/load_images.sh
 	@echo "Creating distributable bundle..."
 	tar -czf $(BUNDLE_FILE) -C $(PACKAGE_DIR) kopa
-	cp install-kopa.sh $(PACKAGE_DIR)/
-	chmod +x $(PACKAGE_DIR)/install-kopa.sh
+	rm -rf $(PACKAGE_DIR)/$(DIST_BUNDLE_NAME)
+	mkdir -p $(PACKAGE_DIR)/$(DIST_BUNDLE_NAME)
+	cp $(BUNDLE_FILE) $(PACKAGE_DIR)/$(DIST_BUNDLE_NAME)/
+	cp install-kopa.sh $(PACKAGE_DIR)/$(DIST_BUNDLE_NAME)/
+	chmod +x $(PACKAGE_DIR)/$(DIST_BUNDLE_NAME)/install-kopa.sh
 	rm -rf $(PACKAGE_WORKDIR)
-	tar -czf $(DIST_BUNDLE_FILE) $(PACKAGE_DIR)
+	tar -czf $(DIST_BUNDLE_FILE) -C $(PACKAGE_DIR) $(DIST_BUNDLE_NAME)
 	@echo "Bundle created: $(BUNDLE_FILE)"
-	@echo "Installer created: $(PACKAGE_DIR)/install-kopa.sh"
+	@echo "Installer created: $(PACKAGE_DIR)/$(DIST_BUNDLE_NAME)/install-kopa.sh"
 	@echo "Distribution bundle created: $(DIST_BUNDLE_FILE)"
 
 # Load docker image package for offline/on-prem deployments
@@ -68,6 +77,5 @@ logs:
 clean:
 	@echo "Removing package artifacts..."
 	rm -rf $(PACKAGE_DIR)
+	rm -rf $(DIST_BUNDLE_NAME)
 	rm -f $(DIST_BUNDLE_FILE)
-	@echo "Cleaning up dangling images..."
-	docker image prune -f

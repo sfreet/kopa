@@ -4,6 +4,15 @@ services:
   webhook:
     build: .
     image: opa-webhook:latest
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    pids_limit: 256
+    mem_limit: 512m
     ports:
       - "8443:8443"
     volumes:
