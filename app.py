@@ -13,7 +13,7 @@ app = Flask(__name__)
 # Load configuration from environment variables
 OPA_ENDPOINT = os.getenv("OPA_ENDPOINT")
 OPA_BEARER_TOKEN = os.getenv("OPA_BEARER_TOKEN")
-OPA_CACERT = os.getenv("OPA_CACERT")
+OPA_CACERT = os.getenv("OPA_CACERT", "/app/opa-ca.crt")
 
 def check_configuration():
     """Checks if all required environment variables are set."""
@@ -93,14 +93,13 @@ def validate():
         logging.info(f"Sending request to OPA: {OPA_ENDPOINT}")
         
         # Configure TLS verification for the OPA server.
-        # If OPA_CACERT is set, use the specified CA certificate.
-        # If OPA_VERIFY_SSL is 'false', disable verification.
-        # Otherwise, use the system's default trust store.
+        # By default, use the mounted CA certificate at /app/opa-ca.crt.
+        # If OPA_VERIFY_SSL is 'false', disable verification instead.
         verify_option = True
-        if OPA_CACERT:
-            verify_option = OPA_CACERT
-        elif os.getenv("OPA_VERIFY_SSL", "true").lower() == "false":
+        if os.getenv("OPA_VERIFY_SSL", "true").lower() == "false":
             verify_option = False
+        elif OPA_CACERT:
+            verify_option = OPA_CACERT
         
         response = requests.post(
             OPA_ENDPOINT, 

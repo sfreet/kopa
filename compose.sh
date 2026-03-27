@@ -46,13 +46,15 @@ ensure_opa_ca_mount_path() {
       touch "$OPA_CA_CERT_PATH"
     else
       echo "Warning: $OPA_CA_CERT_PATH is a non-empty directory. Keep as-is." >&2
-      echo "If you don't use OPA_CACERT, remove it and create an empty file instead." >&2
+      echo "Remove the directory and place the CA certificate file at that path." >&2
     fi
     return 0
   fi
 
   if [[ ! -f "$OPA_CA_CERT_PATH" ]]; then
-    touch "$OPA_CA_CERT_PATH"
+    echo "Error: OPA CA certificate file not found: $OPA_CA_CERT_PATH" >&2
+    echo "Run install again to prepare the CA bundle before starting the service." >&2
+    exit 1
   fi
 }
 

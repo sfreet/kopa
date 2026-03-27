@@ -68,14 +68,16 @@ Install-time certificate generation:
 Examples:
 
 ```bash
+./install-kopa.sh kopa.tar.gz --ip 172.16.102.96
+./install-kopa.sh kopa.tar.gz --ip 172.16.102.96 --domain webhook.example.com
+./install-kopa.sh kopa.tar.gz --domain webhook.example.com
 ./install-kopa.sh kopa.tar.gz --ip 172.16.102.96 --ca-path ~/opt/opa/cert
-./install-kopa.sh kopa.tar.gz --ip 172.16.102.96 --domain webhook.example.com --ca-path ~/opt/opa/cert
-./install-kopa.sh kopa.tar.gz --domain webhook.example.com --ca-path ~/opt/opa/cert
 ```
 
 Behavior:
 
-- If `--ca-path` contains `myCA.crt` and `myCA.key` (in `<PATH>` or `<PATH>/cert`), that CA is used.
+- If `~/opt/opa/cert` or `~/opt/opa` contains `myCA.crt` and `myCA.key`, that CA is used automatically.
+- `--ca-path` overrides the default lookup and uses `myCA.crt` and `myCA.key` from `<PATH>` or `<PATH>/cert`.
 - If CA is not found, self CA (`opa-ca.crt` / `opa-ca.key`) is created and used.
 - `server.crt` is generated during install with SAN IP from `--ip`, SAN DNS from `--domain`, or both.
 - `external-webhook-config.yaml` is updated during install so `clientConfig.caBundle` matches the active CA.
@@ -100,15 +102,19 @@ Other commands:
 `install-kopa.sh` creates `.env` from `.env.example` and sets:
 
 ```dotenv
-OPA_CACERT=/app/opa-ca.crt
+KOPA_WEBHOOK_HOST_PORT=7443
 ```
 
 You still need to set actual OPA values in `.env`:
+During interactive install, the installer prompts for:
 
 - `OPA_ENDPOINT`
 - `OPA_BEARER_TOKEN`
+- `KOPA_WEBHOOK_HOST_PORT`
 
-If you need different published ports, update `docker-compose.yaml` before starting the service. In rootless Docker environments, avoid host ports below `1024`.
+and writes them to `.env`. By default it suggests `7443` for the published webhook port. In rootless Docker environments, avoid host ports below `1024`.
+
+The installer also prepares `opa-ca.crt` in the install directory. If an external CA is available under `~/opt/opa/cert` or `~/opt/opa`, that CA certificate is copied into `opa-ca.crt`; otherwise the generated self CA is used.
 
 ## Kubernetes Webhook Configuration
 

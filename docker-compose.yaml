@@ -14,7 +14,7 @@ services:
     pids_limit: 256
     mem_limit: 512m
     ports:
-      - "8443:8443"
+      - "${KOPA_WEBHOOK_HOST_PORT:-7443}:8443"
     volumes:
       # Mount the certificate files from the host into the container.
       - ./server.crt:/app/server.crt:ro
